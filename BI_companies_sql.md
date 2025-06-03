@@ -1,5 +1,6 @@
 ## Companies Schema
 
+```
 -- Ako šema ne postoji, kreiraj je
 CREATE SCHEMA IF NOT EXISTS company_schema;
 
@@ -88,3 +89,4 @@ plug_id UUID NOT NULL REFERENCES company_smart_plugs(id) ON DELETE CASCADE,
 timestamp TIMESTAMP NOT NULL,
 power_kwh DECIMAL(6,3) NOT NULL
 );
+```
