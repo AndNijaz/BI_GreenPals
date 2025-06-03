@@ -1,6 +1,8 @@
 ## Users/Public Schema
 
 ```
+SET search_path TO public;
+
 CREATE TABLE users (
     id UUID PRIMARY KEY,
     name TEXT NOT NULL,
