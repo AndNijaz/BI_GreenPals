@@ -1,3 +1,5 @@
+## Companies Schema
+
 -- Ako šema ne postoji, kreiraj je
 CREATE SCHEMA IF NOT EXISTS company_schema;
 
