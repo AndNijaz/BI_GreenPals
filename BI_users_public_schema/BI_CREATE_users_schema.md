@@ -55,4 +55,7 @@ CREATE TABLE readings (
     power_kwh DECIMAL(6,3) NOT NULL
 );
 
+ALTER TABLE locations DROP COLUMN co2_factor;
+
+
 ```
