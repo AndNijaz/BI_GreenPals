@@ -1,0 +1,264 @@
+CREATE SCHEMA IF NOT EXISTS archive;
+
+-- USERS
+CREATE TABLE IF NOT EXISTS archive.users (
+    id SERIAL PRIMARY KEY,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL DEFAULT '9999-12-31',
+    process TEXT NOT NULL,
+    source TEXT NOT NULL,
+    updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    user_id UUID,
+    name TEXT,
+    email TEXT,
+    eco_points INTEGER
+);
+
+-- DEVICES
+CREATE TABLE IF NOT EXISTS archive.devices (
+    id SERIAL PRIMARY KEY,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL DEFAULT '9999-12-31',
+    process TEXT NOT NULL,
+    source TEXT NOT NULL,
+    updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    device_id INTEGER,
+    name TEXT,
+    category TEXT
+);
+
+-- SMART PLUGS
+CREATE TABLE IF NOT EXISTS archive.smart_plugs (
+    id SERIAL PRIMARY KEY,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL DEFAULT '9999-12-31',
+    process TEXT NOT NULL,
+    source TEXT NOT NULL,
+    updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    plug_id UUID,
+    user_id UUID,
+    room_id INTEGER,
+    device_id INTEGER,
+    status BOOLEAN
+);
+
+-- PLUG ASSIGNMENTS
+CREATE TABLE IF NOT EXISTS archive.plug_assignments (
+    id SERIAL PRIMARY KEY,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL DEFAULT '9999-12-31',
+    process TEXT NOT NULL,
+    source TEXT NOT NULL,
+    updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    assignment_id INTEGER,
+    plug_id UUID,
+    room_id INTEGER,
+    device_id INTEGER,
+    start_time TIMESTAMP,
+    end_time TIMESTAMP
+);
+
+-- READINGS
+CREATE TABLE IF NOT EXISTS archive.readings (
+    id SERIAL PRIMARY KEY,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL DEFAULT '9999-12-31',
+    process TEXT NOT NULL,
+    source TEXT NOT NULL,
+    updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    plug_id UUID,
+    timestamp TIMESTAMP,
+    power_kwh DECIMAL(6,3)
+);
+
+-- COMPANY USERS
+CREATE TABLE IF NOT EXISTS archive.company_users (
+    id SERIAL PRIMARY KEY,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL DEFAULT '9999-12-31',
+    process TEXT NOT NULL,
+    source TEXT NOT NULL,
+    updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    user_id UUID,
+    company_id UUID,
+    name TEXT,
+    email TEXT,
+    department_id INTEGER,
+    role TEXT
+);
+
+-- COMPANY DEVICES
+CREATE TABLE IF NOT EXISTS archive.company_devices (
+    id SERIAL PRIMARY KEY,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL DEFAULT '9999-12-31',
+    process TEXT NOT NULL,
+    source TEXT NOT NULL,
+    updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    device_id INTEGER,
+    name TEXT,
+    category TEXT
+);
+
+-- COMPANY READINGS
+CREATE TABLE IF NOT EXISTS archive.company_readings (
+    id SERIAL PRIMARY KEY,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL DEFAULT '9999-12-31',
+    process TEXT NOT NULL,
+    source TEXT NOT NULL,
+    updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    plug_id UUID,
+    timestamp TIMESTAMP,
+    power_kwh DECIMAL(6,3)
+);
+
+-- COMPANY SMART PLUGS
+CREATE TABLE IF NOT EXISTS archive.company_smart_plugs (
+    id SERIAL PRIMARY KEY,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL DEFAULT '9999-12-31',
+    process TEXT NOT NULL,
+    source TEXT NOT NULL,
+    updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    plug_id UUID,
+    company_id UUID,
+    room_id INTEGER,
+    device_id INTEGER,
+    status BOOLEAN
+);
+
+-- COMPANIES
+CREATE TABLE IF NOT EXISTS archive.companies (
+    id SERIAL PRIMARY KEY,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL DEFAULT '9999-12-31',
+    process TEXT NOT NULL,
+    source TEXT NOT NULL,
+    updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    company_id UUID,
+    name TEXT,
+    industry TEXT
+);
+
+
+CREATE INDEX IF NOT EXISTS idx_archive_readings_lookup
+ON archive.readings (plug_id, timestamp, end_date);
+
+
+-- ////////////////////// - ovo emo na full loadu smjestiti - //////////////////////
+-- Ovaj SQL skript čisti i popunjava arhivske tabele iz landing tabela.
+-- 1) Očisti sve archive tabele
+TRUNCATE TABLE 
+    archive.users,
+    archive.devices,
+    archive.smart_plugs,
+    archive.plug_assignments,
+    archive.readings,
+    archive.company_users,
+    archive.company_devices,
+    archive.company_readings,
+    archive.company_smart_plugs,
+    archive.companies
+RESTART IDENTITY;
+
+-- 2) Napuni archive.users
+INSERT INTO archive.users (
+    start_date, end_date, process, source, updated,
+    user_id, name, email, eco_points
+)
+SELECT
+    updated_at, '9999-12-31', 'initial_archive', 'landing.users',
+    updated_at, id, name, email, eco_points
+FROM landing.users;
+
+-- 3) Napuni archive.devices
+INSERT INTO archive.devices (
+    start_date, end_date, process, source, updated,
+    device_id, name, category
+)
+SELECT
+    updated_at, '9999-12-31', 'initial_archive', 'landing.devices',
+    updated_at, id, name, category
+FROM landing.devices;
+
+-- 4) Napuni archive.smart_plugs
+INSERT INTO archive.smart_plugs (
+    start_date, end_date, process, source, updated,
+    plug_id, user_id, room_id, device_id, status
+)
+SELECT
+    updated_at, '9999-12-31', 'initial_archive', 'landing.smart_plugs',
+    updated_at, id, user_id, room_id, device_id, status
+FROM landing.smart_plugs;
+
+-- 5) Napuni archive.plug_assignments
+INSERT INTO archive.plug_assignments (
+    start_date, end_date, process, source, updated,
+    assignment_id, plug_id, room_id, device_id, start_time, end_time
+)
+SELECT
+    updated_at, '9999-12-31', 'initial_archive', 'landing.plug_assignments',
+    updated_at, id, plug_id, room_id, device_id, start_time, end_time
+FROM landing.plug_assignments;
+
+-- 6) Napuni archive.readings
+INSERT INTO archive.readings (
+    start_date, end_date, process, source, updated,
+    plug_id, timestamp, power_kwh
+)
+SELECT
+    updated_at, '9999-12-31', 'initial_archive', 'landing.readings',
+    updated_at, plug_id, timestamp, power_kwh
+FROM landing.readings;
+
+-- 7) Napuni archive.company_users
+INSERT INTO archive.company_users (
+    start_date, end_date, process, source, updated,
+    user_id, company_id, name, email, department_id, role
+)
+SELECT
+    updated_at, '9999-12-31', 'initial_archive', 'landing.company_users',
+    updated_at, id, company_id, name, email, department_id, role
+FROM landing.company_users;
+
+-- 8) Napuni archive.company_devices
+INSERT INTO archive.company_devices (
+    start_date, end_date, process, source, updated,
+    device_id, name, category
+)
+SELECT
+    updated_at, '9999-12-31', 'initial_archive', 'landing.company_devices',
+    updated_at, id, name, category
+FROM landing.company_devices;
+
+-- 9) Napuni archive.company_readings
+INSERT INTO archive.company_readings (
+    start_date, end_date, process, source, updated,
+    plug_id, timestamp, power_kwh
+)
+SELECT
+    updated_at, '9999-12-31', 'initial_archive', 'landing.company_readings',
+    updated_at, plug_id, timestamp, power_kwh
+FROM landing.company_readings;
+
+-- 10) Napuni archive.company_smart_plugs
+INSERT INTO archive.company_smart_plugs (
+    start_date, end_date, process, source, updated,
+    plug_id, company_id, room_id, device_id, status
+)
+SELECT
+    updated_at, '9999-12-31', 'initial_archive', 'landing.company_smart_plugs',
+    updated_at, id, company_id, room_id, device_id, status
+FROM landing.company_smart_plugs;
+
+-- 11) Napuni archive.companies
+INSERT INTO archive.companies (
+    start_date, end_date, process, source, updated,
+    company_id, name, industry
+)
+SELECT
+    updated_at, '9999-12-31', 'initial_archive', 'landing.companies',
+    updated_at, id, name, industry
+FROM landing.companies;
+
