@@ -142,123 +142,80 @@ CREATE TABLE IF NOT EXISTS archive.companies (
 );
 
 
+CREATE TABLE IF NOT EXISTS archive.locations (
+    id SERIAL PRIMARY KEY,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL DEFAULT '9999-12-31',
+    process TEXT NOT NULL,
+    source TEXT NOT NULL,
+    updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    location_id INTEGER,
+    name TEXT,
+    country TEXT
+);
+
+CREATE TABLE IF NOT EXISTS archive.rooms (
+    id SERIAL PRIMARY KEY,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL DEFAULT '9999-12-31',
+    process TEXT NOT NULL,
+    source TEXT NOT NULL,
+    updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    room_id INTEGER,
+    name TEXT,
+    location_id INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS archive.company_locations (
+    id SERIAL PRIMARY KEY,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL DEFAULT '9999-12-31',
+    process TEXT NOT NULL,
+    source TEXT NOT NULL,
+    updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    company_location_id INTEGER,
+    name TEXT,
+    country TEXT,
+    co2_factor DECIMAL,
+    company_id UUID
+);
+
+CREATE TABLE IF NOT EXISTS archive.company_rooms (
+    id SERIAL PRIMARY KEY,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL DEFAULT '9999-12-31',
+    process TEXT NOT NULL,
+    source TEXT NOT NULL,
+    updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    company_room_id INTEGER,
+    name TEXT,
+    location_id INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS archive.departments (
+    id SERIAL PRIMARY KEY,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL DEFAULT '9999-12-31',
+    process TEXT NOT NULL,
+    source TEXT NOT NULL,
+    updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    department_id INTEGER,
+    company_id UUID,
+    name TEXT
+);
+
+
 CREATE INDEX IF NOT EXISTS idx_archive_readings_lookup
 ON archive.readings (plug_id, timestamp, end_date);
 
-
--- ////////////////////// - ovo emo na full loadu smjestiti - //////////////////////
--- Ovaj SQL skript čisti i popunjava arhivske tabele iz landing tabela.
--- 1) Očisti sve archive tabele
-TRUNCATE TABLE 
-    archive.users,
-    archive.devices,
-    archive.smart_plugs,
-    archive.plug_assignments,
-    archive.readings,
-    archive.company_users,
-    archive.company_devices,
-    archive.company_readings,
-    archive.company_smart_plugs,
-    archive.companies
-RESTART IDENTITY;
-
--- 2) Napuni archive.users
-INSERT INTO archive.users (
-    start_date, end_date, process, source, updated,
-    user_id, name, email, eco_points
-)
-SELECT
-    updated_at, '9999-12-31', 'initial_archive', 'landing.users',
-    updated_at, id, name, email, eco_points
-FROM landing.users;
-
--- 3) Napuni archive.devices
-INSERT INTO archive.devices (
-    start_date, end_date, process, source, updated,
-    device_id, name, category
-)
-SELECT
-    updated_at, '9999-12-31', 'initial_archive', 'landing.devices',
-    updated_at, id, name, category
-FROM landing.devices;
-
--- 4) Napuni archive.smart_plugs
-INSERT INTO archive.smart_plugs (
-    start_date, end_date, process, source, updated,
-    plug_id, user_id, room_id, device_id, status
-)
-SELECT
-    updated_at, '9999-12-31', 'initial_archive', 'landing.smart_plugs',
-    updated_at, id, user_id, room_id, device_id, status
-FROM landing.smart_plugs;
-
--- 5) Napuni archive.plug_assignments
-INSERT INTO archive.plug_assignments (
-    start_date, end_date, process, source, updated,
-    assignment_id, plug_id, room_id, device_id, start_time, end_time
-)
-SELECT
-    updated_at, '9999-12-31', 'initial_archive', 'landing.plug_assignments',
-    updated_at, id, plug_id, room_id, device_id, start_time, end_time
-FROM landing.plug_assignments;
-
--- 6) Napuni archive.readings
-INSERT INTO archive.readings (
-    start_date, end_date, process, source, updated,
-    plug_id, timestamp, power_kwh
-)
-SELECT
-    updated_at, '9999-12-31', 'initial_archive', 'landing.readings',
-    updated_at, plug_id, timestamp, power_kwh
-FROM landing.readings;
-
--- 7) Napuni archive.company_users
-INSERT INTO archive.company_users (
-    start_date, end_date, process, source, updated,
-    user_id, company_id, name, email, department_id, role
-)
-SELECT
-    updated_at, '9999-12-31', 'initial_archive', 'landing.company_users',
-    updated_at, id, company_id, name, email, department_id, role
-FROM landing.company_users;
-
--- 8) Napuni archive.company_devices
-INSERT INTO archive.company_devices (
-    start_date, end_date, process, source, updated,
-    device_id, name, category
-)
-SELECT
-    updated_at, '9999-12-31', 'initial_archive', 'landing.company_devices',
-    updated_at, id, name, category
-FROM landing.company_devices;
-
--- 9) Napuni archive.company_readings
-INSERT INTO archive.company_readings (
-    start_date, end_date, process, source, updated,
-    plug_id, timestamp, power_kwh
-)
-SELECT
-    updated_at, '9999-12-31', 'initial_archive', 'landing.company_readings',
-    updated_at, plug_id, timestamp, power_kwh
-FROM landing.company_readings;
-
--- 10) Napuni archive.company_smart_plugs
-INSERT INTO archive.company_smart_plugs (
-    start_date, end_date, process, source, updated,
-    plug_id, company_id, room_id, device_id, status
-)
-SELECT
-    updated_at, '9999-12-31', 'initial_archive', 'landing.company_smart_plugs',
-    updated_at, id, company_id, room_id, device_id, status
-FROM landing.company_smart_plugs;
-
--- 11) Napuni archive.companies
-INSERT INTO archive.companies (
-    start_date, end_date, process, source, updated,
-    company_id, name, industry
-)
-SELECT
-    updated_at, '9999-12-31', 'initial_archive', 'landing.companies',
-    updated_at, id, name, industry
-FROM landing.companies;
-
+CREATE INDEX IF NOT EXISTS idx_archive_users_lookup
+  ON archive.users (user_id, end_date);
+CREATE INDEX IF NOT EXISTS idx_archive_devices_lookup
+  ON archive.devices (device_id, end_date);
+CREATE INDEX IF NOT EXISTS idx_archive_smart_plugs_lookup
+  ON archive.smart_plugs (plug_id, end_date);
+CREATE INDEX IF NOT EXISTS idx_archive_plug_assignments_lookup
+  ON archive.plug_assignments (assignment_id, end_date);
+CREATE INDEX IF NOT EXISTS idx_archive_company_locations_lookup
+  ON archive.company_locations (company_location_id, end_date);
+/* … i tako dalje za svaku arhivsku tablicu … */

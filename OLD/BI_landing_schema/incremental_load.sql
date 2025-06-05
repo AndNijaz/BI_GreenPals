@@ -88,3 +88,10 @@ FROM company_schema.company_users
 WHERE updated_at > (SELECT COALESCE(MAX(updated_at), '2000-01-01') FROM landing.company_users)
 ON CONFLICT (id) DO UPDATE SET
 company_id=EXCLUDED.company_id, name=EXCLUDED.name, email=EXCLUDED.email, department_id=EXCLUDED.department_id, role=EXCLUDED.role, created_at=EXCLUDED.created_at, updated_at=EXCLUDED.updated_at;
+
+INSERT INTO landing.locations (id, name, country, updated_at)
+SELECT id, name, country, updated_at
+FROM public.locations
+WHERE updated_at > (SELECT COALESCE(MAX(updated_at), '2000-01-01') FROM landing.locations)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name, country = EXCLUDED.country, updated_at=EXCLUDED.updated_at;

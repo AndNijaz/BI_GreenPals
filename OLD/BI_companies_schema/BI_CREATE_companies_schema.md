@@ -204,4 +204,24 @@ CREATE TRIGGER trg_company_readings_updated_at
 BEFORE UPDATE ON company_schema.company_readings
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+
+ALTER TABLE company_schema.company_locations
+  ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+CREATE TRIGGER trg_company_locations_updated_at
+BEFORE UPDATE ON company_schema.company_locations
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+
+ALTER TABLE company_schema.company_rooms
+  ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+CREATE TRIGGER trg_company_rooms_updated_at
+BEFORE UPDATE ON company_schema.company_rooms
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+ALTER TABLE company_schema.departments
+  ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+CREATE TRIGGER trg_departments_updated_at
+BEFORE UPDATE ON company_schema.departments
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 ```

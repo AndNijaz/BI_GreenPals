@@ -1,17 +1,16 @@
+# FULL LOAD SCRIPT
+
+```sql
 -- ================================================================
 -- FULL LOAD I SCD2 AŽURIRANJE ZA SVE TABELE
--- Pretpostavka: Postoje landing.* tabele i archive.* tabele za sljedeće entitete:
+-- Pretpostavka: Postoje landing.* tabele (s PRIMARY KEY) i archive.* tabele
+-- za sljedeće entitete:
 --   users, devices, smart_plugs, plug_assignments, readings,
---   company_users, company_devices, company_readings, company_smart_plugs, companies
--- Također pretpostavljamo da landing.* tabele već imaju pridodate PRIMARY KEY ograničenja
--- i da archive tabele imaju strukturu:
---   start_date       TIMESTAMP
---   end_date         TIMESTAMP
---   process          TEXT
---   source           TEXT
---   updated          TIMESTAMP
---   <ostali atributi specifični za entitet>
--- Početak full load-a:
+--   company_users, company_devices, company_readings, company_smart_plugs,
+--   companies, locations, rooms, company_locations, company_rooms, departments
+-- Archive tabele imaju polja:
+--   start_date TIMESTAMP, end_date TIMESTAMP, process TEXT, source TEXT, updated TIMESTAMP,
+--   plus kolone specifične za entitet (poput user_id, device_id itd.)
 -- ================================================================
 
 -- 1) TRUNCATE svih landing tabela i RESTART IDENTITY (ako je primjenjivo)
@@ -33,16 +32,15 @@ TRUNCATE landing.devices,
          landing.departments
 RESTART IDENTITY;
 
--- 2) Puni landing tabele iz operativnih (public.* i company_schema.*)
-
+-- 2) Puni landing tabele iz operativnih (public.* i company_schema.*, departments iz company_schema)
 -- PUBLIC za devices
 INSERT INTO landing.devices (id, name, category, created_at, updated_at)
 SELECT id, name, category, created_at, updated_at
 FROM public.devices;
 
 -- PUBLIC za locations
-INSERT INTO landing.locations (id, name, country)
-SELECT id, name, country
+INSERT INTO landing.locations (id, name, country, updated_at)
+SELECT id, name, country, updated_at
 FROM public.locations;
 
 -- PUBLIC za plug_assignments
@@ -53,13 +51,15 @@ SELECT id, plug_id, room_id, device_id, start_time, end_time, created_at, update
 FROM public.plug_assignments;
 
 -- PUBLIC za readings
-INSERT INTO landing.readings (id, plug_id, timestamp, power_kwh, created_at, updated_at)
+INSERT INTO landing.readings (
+    id, plug_id, timestamp, power_kwh, created_at, updated_at
+)
 SELECT id, plug_id, timestamp, power_kwh, created_at, updated_at
 FROM public.readings;
 
 -- PUBLIC za rooms
-INSERT INTO landing.rooms (id, name, location_id)
-SELECT id, name, location_id
+INSERT INTO landing.rooms (id, name, location_id, updated_at)
+SELECT id, name, location_id, updated_at
 FROM public.rooms;
 
 -- PUBLIC za smart_plugs
@@ -70,35 +70,31 @@ SELECT id, user_id, room_id, device_id, status, created_at, updated_at
 FROM public.smart_plugs;
 
 -- PUBLIC za users
-INSERT INTO landing.users (id, name, email, eco_points, created_at, updated_at)
+INSERT INTO landing.users (
+    id, name, email, eco_points, created_at, updated_at
+)
 SELECT id, name, email, eco_points, created_at, updated_at
 FROM public.users;
 
 -- COMPANY_SCHEMA za company_devices
-INSERT INTO landing.company_devices (id, name, category, created_at, updated_at)
+INSERT INTO landing.company_devices (
+    id, name, category, created_at, updated_at
+)
 SELECT id, name, category, created_at, updated_at
 FROM company_schema.company_devices;
 
 -- COMPANY_SCHEMA za company_locations
-INSERT INTO landing.company_locations (id, name, country, co2_factor, company_id)
-SELECT id, name, country, co2_factor, company_id
+INSERT INTO landing.company_locations (
+    id, name, country, co2_factor, company_id, updated_at
+)
+SELECT id, name, country, co2_factor, company_id, updated_at
 FROM company_schema.company_locations;
 
--- COMPANY_SCHEMA za company_plug_assignments
-INSERT INTO landing.company_plug_assignments (
-    id, plug_id, room_id, device_id, start_time, end_time, created_at, updated_at
-)
-SELECT id, plug_id, room_id, device_id, start_time, end_time, created_at, updated_at
-FROM company_schema.company_plug_assignments;
-
--- COMPANY_SCHEMA za company_readings
-INSERT INTO landing.company_readings (id, plug_id, timestamp, power_kwh, created_at, updated_at)
-SELECT id, plug_id, timestamp, power_kwh, created_at, updated_at
-FROM company_schema.company_readings;
-
 -- COMPANY_SCHEMA za company_rooms
-INSERT INTO landing.company_rooms (id, name, location_id)
-SELECT id, name, location_id
+INSERT INTO landing.company_rooms (
+    id, name, location_id, updated_at
+)
+SELECT id, name, location_id, updated_at
 FROM company_schema.company_rooms;
 
 -- COMPANY_SCHEMA za company_smart_plugs
@@ -115,23 +111,41 @@ INSERT INTO landing.company_users (
 SELECT id, company_id, name, email, department_id, role, created_at, updated_at
 FROM company_schema.company_users;
 
+-- COMPANY_SCHEMA za company_plug_assignments
+INSERT INTO landing.company_plug_assignments (
+    id, plug_id, room_id, device_id, start_time, end_time, created_at, updated_at
+)
+SELECT id, plug_id, room_id, device_id, start_time, end_time, created_at, updated_at
+FROM company_schema.company_plug_assignments;
+
+-- COMPANY_SCHEMA za company_readings
+INSERT INTO landing.company_readings (
+    id, plug_id, timestamp, power_kwh, created_at, updated_at
+)
+SELECT id, plug_id, timestamp, power_kwh, created_at, updated_at
+FROM company_schema.company_readings;
+
 -- COMPANY_SCHEMA za companies
-INSERT INTO landing.companies (id, name, industry, created_at, updated_at)
+INSERT INTO landing.companies (
+    id, name, industry, created_at, updated_at
+)
 SELECT id, name, industry, created_at, updated_at
 FROM company_schema.companies;
 
 -- COMPANY_SCHEMA za departments
-INSERT INTO landing.departments (id, company_id, name)
-SELECT id, company_id, name
+INSERT INTO landing.departments (
+    id, company_id, name, updated_at
+)
+SELECT id, company_id, name, updated_at
 FROM company_schema.departments;
 
 -- 3) SCD2 LOGIKA: AŽURIRANJE archive TABELA
--- Napomena: Archive tabele ne treba TRUNCATE-ati – želimo zadržati povijest.
+-- Napomena: Archive tabele se ne TRUNCATE-a – zadržavamo povijest
 
 -- ========================
 -- A) Archive: users
 -- ========================
--- 3A.1) Zatvaramo postojeće verzije koje su se promijenile (end_date = trenutni timestamp)
+-- 3A.1) Zatvorimo postojeće verzije koje su se promijenile
 UPDATE archive.users AS a
 SET end_date = CURRENT_TIMESTAMP
 WHERE a.end_date = '9999-12-31'
@@ -146,7 +160,7 @@ WHERE a.end_date = '9999-12-31'
       )
   );
 
--- 3A.2) Ubacujemo nove verzije za promijenjene ili nove korisnike
+-- 3A.2) Ubacimo nove verzije za promijenjene ili nove korisnike
 INSERT INTO archive.users (
     start_date, end_date, process, source, updated,
     user_id, name, email, eco_points
@@ -166,7 +180,7 @@ WHERE a.user_id IS NULL
 -- ========================
 -- B) Archive: devices
 -- ========================
--- 3B.1) Zatvaramo postojeće verzije uređaja koji su se promijenili
+-- 3B.1) Zatvorimo postojeće verzije uređaja koji su se promijenili
 UPDATE archive.devices AS a
 SET end_date = CURRENT_TIMESTAMP
 WHERE a.end_date = '9999-12-31'
@@ -180,7 +194,7 @@ WHERE a.end_date = '9999-12-31'
       )
   );
 
--- 3B.2) Ubacujemo nove verzije za promijenjene ili nove uređaje
+-- 3B.2) Ubacimo nove verzije za promijenjene ili nove uređaje
 INSERT INTO archive.devices (
     start_date, end_date, process, source, updated,
     device_id, name, category
@@ -199,7 +213,7 @@ WHERE a.device_id IS NULL
 -- ========================
 -- C) Archive: smart_plugs
 -- ========================
--- 3C.1) Zatvaramo postojeće verzije smart_plug-a koji su se promijenili
+-- 3C.1) Zatvorimo postojeće verzije smart_plug-a koji su se promijenili
 UPDATE archive.smart_plugs AS a
 SET end_date = CURRENT_TIMESTAMP
 WHERE a.end_date = '9999-12-31'
@@ -215,7 +229,7 @@ WHERE a.end_date = '9999-12-31'
       )
   );
 
--- 3C.2) Ubacujemo nove verzije za promijenjene ili nove smart_plug-ove
+-- 3C.2) Ubacimo nove verzije za promijenjene ili nove smart_plug-ove
 INSERT INTO archive.smart_plugs (
     start_date, end_date, process, source, updated,
     plug_id, user_id, room_id, device_id, status
@@ -236,7 +250,7 @@ WHERE a.plug_id IS NULL
 -- ========================
 -- D) Archive: plug_assignments
 -- ========================
--- 3D.1) Zatvaramo postojeće verzije dodjela koje su se promijenile
+-- 3D.1) Zatvorimo postojeće verzije dodjela koje su se promijenile
 UPDATE archive.plug_assignments AS a
 SET end_date = CURRENT_TIMESTAMP
 WHERE a.end_date = '9999-12-31'
@@ -253,7 +267,7 @@ WHERE a.end_date = '9999-12-31'
       )
   );
 
--- 3D.2) Ubacujemo nove verzije za promijenjene ili nove plug_assignments
+-- 3D.2) Ubacimo nove verzije za promijenjene ili nove plug_assignments
 INSERT INTO archive.plug_assignments (
     start_date, end_date, process, source, updated,
     assignment_id, plug_id, room_id, device_id, start_time, end_time
@@ -275,7 +289,7 @@ WHERE a.assignment_id IS NULL
 -- ========================
 -- E) Archive: readings
 -- ========================
--- 3E.1) Zatvaramo postojeće verzije očitanja koja su se promijenila
+-- 3E.1) Zatvorimo postojeće verzije očitanja koja su se promijenila
 UPDATE archive.readings AS a
 SET end_date = CURRENT_TIMESTAMP
 WHERE a.end_date = '9999-12-31'
@@ -290,7 +304,7 @@ WHERE a.end_date = '9999-12-31'
       AND a.end_date = '9999-12-31'
   );
 
--- 3E.2) Ubacujemo nove verzije za promijenjena ili nova očitanja
+-- 3E.2) Ubacimo nove verzije za promijenjena ili nova očitanja
 INSERT INTO archive.readings (
     start_date, end_date, process, source, updated,
     plug_id, timestamp, power_kwh
@@ -310,7 +324,7 @@ WHERE a.plug_id IS NULL
 -- ================================
 -- F) Archive: company_users
 -- ================================
--- 3F.1) Zatvaramo postojeće verzije company_users koje su se promijenile
+-- 3F.1) Zatvorimo postojeće verzije company_users koje su se promijenile
 UPDATE archive.company_users AS a
 SET end_date = CURRENT_TIMESTAMP
 WHERE a.end_date = '9999-12-31'
@@ -327,7 +341,7 @@ WHERE a.end_date = '9999-12-31'
       )
   );
 
--- 3F.2) Ubacujemo nove verzije za promijenjene ili nove company_users
+-- 3F.2) Ubacimo nove verzije za promijenjene ili nove company_users
 INSERT INTO archive.company_users (
     start_date, end_date, process, source, updated,
     user_id, company_id, name, email, department_id, role
@@ -349,7 +363,7 @@ WHERE a.user_id IS NULL
 -- ================================
 -- G) Archive: company_devices
 -- ================================
--- 3G.1) Zatvaramo postojeće verzije company_devices koje su se promijenile
+-- 3G.1) Zatvorimo postojeće verzije company_devices koje su se promijenile
 UPDATE archive.company_devices AS a
 SET end_date = CURRENT_TIMESTAMP
 WHERE a.end_date = '9999-12-31'
@@ -363,7 +377,7 @@ WHERE a.end_date = '9999-12-31'
       )
   );
 
--- 3G.2) Ubacujemo nove verzije za promijenjene ili nove company_devices
+-- 3G.2) Ubacimo nove verzije za promijenjene ili nove company_devices
 INSERT INTO archive.company_devices (
     start_date, end_date, process, source, updated,
     device_id, name, category
@@ -382,7 +396,7 @@ WHERE a.device_id IS NULL
 -- ==================================
 -- H) Archive: company_readings
 -- ==================================
--- 3H.1) Zatvaramo postojeća očitanja u company_readings koja su se promijenila
+-- 3H.1) Zatvorimo postojeća očitanja u company_readings koja su se promijenila
 UPDATE archive.company_readings AS a
 SET end_date = CURRENT_TIMESTAMP
 WHERE a.end_date = '9999-12-31'
@@ -397,7 +411,7 @@ WHERE a.end_date = '9999-12-31'
       AND a.end_date = '9999-12-31'
   );
 
--- 3H.2) Ubacujemo nove verzije za promijenjena ili nova očitanja u company_readings
+-- 3H.2) Ubacimo nove verzije za promijenjena ili nova očitanja u company_readings
 INSERT INTO archive.company_readings (
     start_date, end_date, process, source, updated,
     plug_id, timestamp, power_kwh
@@ -417,7 +431,7 @@ WHERE a.plug_id IS NULL
 -- ========================================
 -- I) Archive: company_smart_plugs
 -- ========================================
--- 3I.1) Zatvaramo postojeće verzije company_smart_plugs koje su se promijenile
+-- 3I.1) Zatvorimo postojeće verzije company_smart_plugs koje su se promijenile
 UPDATE archive.company_smart_plugs AS a
 SET end_date = CURRENT_TIMESTAMP
 WHERE a.end_date = '9999-12-31'
@@ -433,7 +447,7 @@ WHERE a.end_date = '9999-12-31'
       )
   );
 
--- 3I.2) Ubacujemo nove verzije za promijenjene ili nove company_smart_plugs
+-- 3I.2) Ubacimo nove verzije za promijenjene ili nove company_smart_plugs
 INSERT INTO archive.company_smart_plugs (
     start_date, end_date, process, source, updated,
     plug_id, company_id, room_id, device_id, status
@@ -454,7 +468,7 @@ WHERE a.plug_id IS NULL
 -- ================================
 -- J) Archive: companies
 -- ================================
--- 3J.1) Zatvaramo postojeće verzije companies koje su se promijenile
+-- 3J.1) Zatvorimo postojeće verzije companies koje su se promijenile
 UPDATE archive.companies AS a
 SET end_date = CURRENT_TIMESTAMP
 WHERE a.end_date = '9999-12-31'
@@ -468,7 +482,7 @@ WHERE a.end_date = '9999-12-31'
       )
   );
 
--- 3J.2) Ubacujemo nove verzije za promijenjene ili nove kompanije
+-- 3J.2) Ubacimo nove verzije za promijenjene ili nove kompanije
 INSERT INTO archive.companies (
     start_date, end_date, process, source, updated,
     company_id, name, industry
@@ -484,11 +498,176 @@ WHERE a.company_id IS NULL
    OR l.name IS DISTINCT FROM a.name
    OR l.industry IS DISTINCT FROM a.industry;
 
--- ================================
--- Kraj SCD2 logike
--- ================================
+-- ========================================
+-- K) Archive: locations
+-- ========================================
+-- 3K.1) Zatvorimo postojeće verzije locations koje su se promijenile
+UPDATE archive.locations AS a
+SET end_date = CURRENT_TIMESTAMP
+WHERE a.end_date = '9999-12-31'
+  AND EXISTS (
+    SELECT 1
+    FROM landing.locations AS l
+    WHERE l.id = a.location_id
+      AND (
+          l.name IS DISTINCT FROM a.name
+          OR l.country IS DISTINCT FROM a.country
+      )
+  );
 
--- Sada su landing tabele osvježene punim load-om,
--- a archive tabele ažurirane tako da zadrže povijest promjena
--- preko pravilne SCD2 logike: zatvaranje starih redova s trenutnim timestamp-om i dodavanje novih verzija.
+-- 3K.2) Ubacimo nove verzije za promijenjene ili nove locations
+INSERT INTO archive.locations (
+    start_date, end_date, process, source, updated,
+    location_id, name, country
+)
+SELECT
+    l.updated_at, '9999-12-31', 'scd2_update', 'landing.locations', l.updated_at,
+    l.id, l.name, l.country
+FROM landing.locations AS l
+LEFT JOIN archive.locations AS a
+  ON l.id = a.location_id
+ AND a.end_date = '9999-12-31'
+WHERE a.location_id IS NULL
+   OR l.name IS DISTINCT FROM a.name
+   OR l.country IS DISTINCT FROM a.country;
+
+-- ========================================
+-- L) Archive: rooms
+-- ========================================
+-- 3L.1) Zatvorimo postojeće verzije rooms koje su se promijenile
+UPDATE archive.rooms AS a
+SET end_date = CURRENT_TIMESTAMP
+WHERE a.end_date = '9999-12-31'
+  AND EXISTS (
+    SELECT 1
+    FROM landing.rooms AS l
+    WHERE l.id = a.room_id
+      AND (
+          l.name IS DISTINCT FROM a.name
+          OR l.location_id IS DISTINCT FROM a.location_id
+      )
+  );
+
+-- 3L.2) Ubacimo nove verzije za promijenjene ili nove rooms
+INSERT INTO archive.rooms (
+    start_date, end_date, process, source, updated,
+    room_id, name, location_id
+)
+SELECT
+    l.updated_at, '9999-12-31', 'scd2_update', 'landing.rooms', l.updated_at,
+    l.id, l.name, l.location_id
+FROM landing.rooms AS l
+LEFT JOIN archive.rooms AS a
+  ON l.id = a.room_id
+ AND a.end_date = '9999-12-31'
+WHERE a.room_id IS NULL
+   OR l.name IS DISTINCT FROM a.name
+   OR l.location_id IS DISTINCT FROM a.location_id;
+
+-- ================================================
+-- M) Archive: company_locations
+-- ================================================
+-- 3M.1) Zatvorimo postojeće verzije company_locations koje su se promijenile
+UPDATE archive.company_locations AS a
+SET end_date = CURRENT_TIMESTAMP
+WHERE a.end_date = '9999-12-31'
+  AND EXISTS (
+    SELECT 1
+    FROM landing.company_locations AS l
+    WHERE l.id = a.company_location_id
+      AND (
+          l.name IS DISTINCT FROM a.name
+          OR l.country IS DISTINCT FROM a.country
+          OR l.co2_factor IS DISTINCT FROM a.co2_factor
+          OR l.company_id IS DISTINCT FROM a.company_id
+      )
+  );
+
+-- 3M.2) Ubacimo nove verzije za promijenjene ili nove company_locations
+INSERT INTO archive.company_locations (
+    start_date, end_date, process, source, updated,
+    company_location_id, name, country, co2_factor, company_id
+)
+SELECT
+    l.updated_at, '9999-12-31', 'scd2_update', 'landing.company_locations', l.updated_at,
+    l.id, l.name, l.country, l.co2_factor, l.company_id
+FROM landing.company_locations AS l
+LEFT JOIN archive.company_locations AS a
+  ON l.id = a.company_location_id
+ AND a.end_date = '9999-12-31'
+WHERE a.company_location_id IS NULL
+   OR l.name IS DISTINCT FROM a.name
+   OR l.country IS DISTINCT FROM a.country
+   OR l.co2_factor IS DISTINCT FROM a.co2_factor
+   OR l.company_id IS DISTINCT FROM a.company_id;
+
+-- ================================================
+-- N) Archive: company_rooms
+-- ================================================
+-- 3N.1) Zatvorimo postojeće verzije company_rooms koje su se promijenile
+UPDATE archive.company_rooms AS a
+SET end_date = CURRENT_TIMESTAMP
+WHERE a.end_date = '9999-12-31'
+  AND EXISTS (
+    SELECT 1
+    FROM landing.company_rooms AS l
+    WHERE l.id = a.company_room_id
+      AND (
+          l.name IS DISTINCT FROM a.name
+          OR l.location_id IS DISTINCT FROM a.location_id
+      )
+  );
+
+-- 3N.2) Ubacimo nove verzije za promijenjene ili nove company_rooms
+INSERT INTO archive.company_rooms (
+    start_date, end_date, process, source, updated,
+    company_room_id, name, location_id
+)
+SELECT
+    l.updated_at, '9999-12-31', 'scd2_update', 'landing.company_rooms', l.updated_at,
+    l.id, l.name, l.location_id
+FROM landing.company_rooms AS l
+LEFT JOIN archive.company_rooms AS a
+  ON l.id = a.company_room_id
+ AND a.end_date = '9999-12-31'
+WHERE a.company_room_id IS NULL
+   OR l.name IS DISTINCT FROM a.name
+   OR l.location_id IS DISTINCT FROM a.location_id;
+
+-- ================================================
+-- O) Archive: departments
+-- ================================================
+-- 3O.1) Zatvorimo postojeće verzije departments koje su se promijenile
+UPDATE archive.departments AS a
+SET end_date = CURRENT_TIMESTAMP
+WHERE a.end_date = '9999-12-31'
+  AND EXISTS (
+    SELECT 1
+    FROM landing.departments AS l
+    WHERE l.id = a.department_id
+      AND (
+          l.company_id IS DISTINCT FROM a.company_id
+          OR l.name IS DISTINCT FROM a.name
+      )
+  );
+
+-- 3O.2) Ubacimo nove verzije za promijenjene ili nove departments
+INSERT INTO archive.departments (
+    start_date, end_date, process, source, updated,
+    department_id, company_id, name
+)
+SELECT
+    l.updated_at, '9999-12-31', 'scd2_update', 'landing.departments', l.updated_at,
+    l.id, l.company_id, l.name
+FROM landing.departments AS l
+LEFT JOIN archive.departments AS a
+  ON l.id = a.department_id
+ AND a.end_date = '9999-12-31'
+WHERE a.department_id IS NULL
+   OR l.company_id IS DISTINCT FROM a.company_id
+   OR l.name IS DISTINCT FROM a.name;
+
 -- ================================================================
+-- Kraj SCD2 logike
+-- ================================================================
+```
