@@ -1,6 +1,8 @@
 ﻿# CREATE PUBLIC SCHEMA FULL SCRIPT
 
 ```sql
+CREATE SCHEMA IF NOT EXISTS public;
+
 -- 1) Definicija funkcije koja će osvježavati updated_at
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
@@ -18,8 +20,8 @@ CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
-  eco_points INTEGER DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  eco_points INTEGER DEFAULT 0,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
