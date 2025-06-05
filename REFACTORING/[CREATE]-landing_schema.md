@@ -25,6 +25,6 @@ CREATE TABLE IF NOT EXISTS landing.companies                AS TABLE company_sch
 CREATE TABLE IF NOT EXISTS landing.departments              AS TABLE company_schema.departments              WITH NO DATA;
 
 -- 4) Dodatne BI tabele u landing
-CREATE TABLE IF NOT EXISTS landing.co2_factors       AS TABLE BI_co2_factors.co2_factors       WITH NO DATA;
-CREATE TABLE IF NOT EXISTS landing.electricity_prices AS TABLE BI_co2_factors.electricity_prices WITH NO DATA;
+--CREATE TABLE IF NOT EXISTS landing.co2_factors       AS TABLE BI_co2_factors.co2_factors       WITH NO DATA;
+--CREATE TABLE IF NOT EXISTS landing.electricity_prices AS TABLE BI_co2_factors.electricity_prices WITH NO DATA;
 ```
