@@ -28,7 +28,7 @@ with DAG(
         task_id="run_full_load",
         bash_command=(
             # Uvjerite se da je Python dostupan unutar PATH-a u Airflow image
-            "python /opt/airflow/dags/full_load_python.py"
+            "python full_load_python.py"
         ),
         cwd="/opt/airflow/dags",
         env={},
