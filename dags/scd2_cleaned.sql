@@ -669,6 +669,86 @@ WHERE a.plug_id IS NULL
    OR c.power_kwh IS DISTINCT FROM a.power_kwh;
 
 
+-- ===================================================================
+-- Archive_CLEANED: co2_factors
+-- ===================================================================
+-- 1) Zatvaramo stare verzije
+UPDATE archive_cleaned.co2_factors AS a
+SET end_date = CURRENT_TIMESTAMP
+WHERE a.end_date = '9999-12-31'
+  AND EXISTS (
+    SELECT 1
+      FROM cleaned.co2_factors AS c
+     WHERE c.source_name = a.source_name
+       AND c.country     = a.country
+       AND (
+            c.co2_factor IS DISTINCT FROM a.co2_factor
+         OR c.unit       IS DISTINCT FROM a.unit
+       )
+  );
+
+-- 2) Ubacujemo nove ili izmijenjene retke
+INSERT INTO archive_cleaned.co2_factors (
+    start_date, end_date, process, source, updated,
+    source_name, country, co2_factor, unit
+)
+SELECT
+    c.updated_at          AS start_date,
+    '9999-12-31'::timestamp AS end_date,
+    'scd2_cleaned'        AS process,
+    'cleaned.co2_factors' AS source,
+    c.updated_at          AS updated,
+    c.source_name,
+    c.country,
+    c.co2_factor,
+    c.unit
+  FROM cleaned.co2_factors AS c
+  LEFT JOIN archive_cleaned.co2_factors AS a
+    ON a.source_name = c.source_name
+   AND a.country     = c.country
+   AND a.end_date    = '9999-12-31'
+ WHERE a.source_name IS NULL
+    OR c.co2_factor IS DISTINCT FROM a.co2_factor
+    OR c.unit       IS DISTINCT FROM a.unit;
+
+
+-- ===================================================================
+-- Archive_CLEANED: electricity_prices
+-- ===================================================================
+-- 1) Zatvaramo stare verzije
+UPDATE archive_cleaned.electricity_prices AS a
+SET end_date = CURRENT_TIMESTAMP
+WHERE a.end_date = '9999-12-31'
+  AND EXISTS (
+    SELECT 1
+      FROM cleaned.electricity_prices AS c
+     WHERE c.country        = a.country
+       AND (
+            c.price_per_kwh IS DISTINCT FROM a.price_per_kwh
+       )
+  );
+
+-- 2) Ubacujemo nove ili izmijenjene retke
+INSERT INTO archive_cleaned.electricity_prices (
+    start_date, end_date, process, source, updated,
+    country, price_per_kwh
+)
+SELECT
+    c.updated_at            AS start_date,
+    '9999-12-31'::timestamp  AS end_date,
+    'scd2_cleaned'          AS process,
+    'cleaned.electricity_prices' AS source,
+    c.updated_at            AS updated,
+    c.country,
+    c.price_per_kwh
+  FROM cleaned.electricity_prices AS c
+  LEFT JOIN archive_cleaned.electricity_prices AS a
+    ON a.country     = c.country
+   AND a.end_date    = '9999-12-31'
+ WHERE a.country IS NULL
+    OR c.price_per_kwh IS DISTINCT FROM a.price_per_kwh;
+
+
 -- ================================================================
 --  Kraj SCD2 logike za cleaned → archive_cleaned
 -- ================================================================

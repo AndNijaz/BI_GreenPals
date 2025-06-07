@@ -679,6 +679,115 @@ WHERE a.company_plug_assignment_id IS NULL
 -- ===================================================================
 --  ZADNJI KORAK: ako trebaš još koju entitetu, ponovi isti uzorak
 -- ===================================================================
+-- Archive: co2_factors
+UPDATE archive.co2_factors SET end_date=CURRENT_TIMESTAMP
+ WHERE end_date='9999-12-31'
+   AND EXISTS(
+     SELECT 1 FROM landing.co2_factors l
+      WHERE l.source_name=archive.co2_factors.source_name
+        AND l.country=archive.co2_factors.country
+        AND l.co2_factor IS DISTINCT FROM archive.co2_factors.co2_factor
+   );
+INSERT INTO archive.co2_factors
+  (start_date,end_date,process,source,updated,
+   source_name,country,co2_factor,unit)
+SELECT updated_at,'9999-12-31','scd2','landing.co2_factors',updated_at,
+       source_name,country,co2_factor,unit
+  FROM landing.co2_factors l
+  LEFT JOIN archive.co2_factors a
+    ON a.source_name=l.source_name
+   AND a.country=l.country
+   AND a.end_date='9999-12-31'
+ WHERE a.source_name IS NULL
+    OR l.co2_factor IS DISTINCT FROM a.co2_factor;
+
+-- Archive: electricity_prices
+UPDATE archive.electricity_prices SET end_date=CURRENT_TIMESTAMP
+ WHERE end_date='9999-12-31'
+   AND EXISTS(
+     SELECT 1 FROM landing.electricity_prices l
+      WHERE l.country=archive.electricity_prices.country
+        AND l.price_per_kwh IS DISTINCT FROM archive.electricity_prices.price_per_kwh
+   );
+INSERT INTO archive.electricity_prices
+  (start_date,end_date,process,source,updated,
+   country,price_per_kwh)
+SELECT updated_at,'9999-12-31','scd2','landing.electricity_prices',updated_at,
+       country,price_per_kwh
+  FROM landing.electricity_prices l
+  LEFT JOIN archive.electricity_prices a
+    ON a.country=l.country
+   AND a.end_date='9999-12-31'
+ WHERE a.country IS NULL
+    OR l.price_per_kwh IS DISTINCT FROM a.price_per_kwh;
+
+
+-- Archive_CLEANED: co2_factors
+UPDATE archive_cleaned.co2_factors AS a
+SET end_date = CURRENT_TIMESTAMP
+WHERE a.end_date = '9999-12-31'
+  AND EXISTS (
+    SELECT 1 FROM cleaned.co2_factors c
+     WHERE c.source_name=a.source_name
+       AND c.country=a.country
+       AND (c.co2_factor IS DISTINCT FROM a.co2_factor OR c.unit IS DISTINCT FROM a.unit)
+  );
+INSERT INTO archive_cleaned.co2_factors
+  (start_date,end_date,process,source,updated,source_name,country,co2_factor,unit)
+SELECT c.updated_at,'9999-12-31','scd2_cleaned','cleaned.co2_factors',c.updated_at,
+       c.source_name,c.country,c.co2_factor,c.unit
+  FROM cleaned.co2_factors c
+  LEFT JOIN archive_cleaned.co2_factors a
+    ON a.source_name=c.source_name AND a.country=c.country AND a.end_date='9999-12-31'
+ WHERE a.source_name IS NULL
+    OR c.co2_factor IS DISTINCT FROM a.co2_factor
+    OR c.unit       IS DISTINCT FROM a.unit;
+
+-- Archive_CLEANED: electricity_prices
+UPDATE archive_cleaned.electricity_prices AS a
+SET end_date = CURRENT_TIMESTAMP
+WHERE a.end_date = '9999-12-31'
+  AND EXISTS (
+    SELECT 1 FROM cleaned.electricity_prices c
+     WHERE c.country=a.country
+       AND c.price_per_kwh IS DISTINCT FROM a.price_per_kwh
+  );
+INSERT INTO archive_cleaned.electricity_prices
+  (start_date,end_date,process,source,updated,country,price_per_kwh)
+SELECT c.updated_at,'9999-12-31','scd2_cleaned','cleaned.electricity_prices',c.updated_at,
+       c.country,c.price_per_kwh
+  FROM cleaned.electricity_prices c
+  LEFT JOIN archive_cleaned.electricity_prices a
+    ON a.country=c.country AND a.end_date='9999-12-31'
+ WHERE a.country IS NULL
+    OR c.price_per_kwh IS DISTINCT FROM a.price_per_kwh;
+
+-- Archive: co2_factors
+UPDATE archive.co2_factors AS a
+SET end_date = CURRENT_TIMESTAMP
+WHERE a.end_date = '9999-12-31'
+  AND EXISTS (
+    SELECT 1
+    FROM landing.co2_factors AS l
+    WHERE l.source_name = a.source_name
+      AND (l.country IS DISTINCT FROM a.country OR l.co2_factor IS DISTINCT FROM a.co2_factor OR l.unit IS DISTINCT FROM a.unit)
+  );
+
+INSERT INTO archive.co2_factors (
+  start_date, end_date, process, source, updated,
+  source_name, country, co2_factor, unit
+)
+SELECT
+  l.updated_at, '9999-12-31', 'scd2_update', 'landing.co2_factors', l.updated_at,
+  l.source_name, l.country, l.co2_factor, l.unit
+FROM landing.co2_factors l
+LEFT JOIN archive.co2_factors a
+  ON a.source_name = l.source_name AND a.end_date = '9999-12-31'
+WHERE a.source_name IS NULL
+   OR l.country    IS DISTINCT FROM a.country
+   OR l.co2_factor IS DISTINCT FROM a.co2_factor
+   OR l.unit       IS DISTINCT FROM a.unit;
+
 
 -- ================================================================
 --   Kraj SCD2 logike. 

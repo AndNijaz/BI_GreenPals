@@ -147,3 +147,18 @@ CREATE TABLE IF NOT EXISTS landing.company_readings (
   created_at TIMESTAMP NOT NULL,
   updated_at TIMESTAMP NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS landing.co2_factors (
+  source_name TEXT      NOT NULL,
+  country     TEXT      NOT NULL,
+  co2_factor  DECIMAL(10,5) NOT NULL,
+  unit        TEXT      DEFAULT 'kgCO2/kWh',
+  updated_at  TIMESTAMP NOT NULL
+);
+
+-- landing.electricity_prices
+CREATE TABLE IF NOT EXISTS landing.electricity_prices (
+  country        TEXT      PRIMARY KEY,
+  price_per_kwh  DECIMAL(6,3) NOT NULL,
+  updated_at     TIMESTAMP  NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

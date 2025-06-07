@@ -99,7 +99,18 @@ ARCHIVE_RAW_TABLES = {
         "archive_tbl": "archive.company_readings",
         "cleaned_tbl": "cleaned.company_readings",
         "columns": ["plug_id", "timestamp", "power_kwh", "updated"]
-    }
+    },
+    "co2_factors": {
+    "archive_tbl":"archive.co2_factors",
+    "cleaned_tbl":"cleaned.co2_factors",
+    "columns":["source_name","country","co2_factor","unit","updated"]
+    },
+    "electricity_prices": {
+        "archive_tbl":"archive.electricity_prices",
+        "cleaned_tbl":"cleaned.electricity_prices",
+        "columns":["country","price_per_kwh","updated"]
+    },
+
 }
 
 
