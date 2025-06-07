@@ -15,7 +15,8 @@ with DAG(
     default_args=default_args,
     description="ETL: Kreiranje i punjenje Star Schema (dimenzije + fact_readings)",
     start_date=datetime(2023, 1, 1),
-    schedule_interval="0 3 * * *",  # svaki dan u 03:00
+    # schedule_interval="0 3 * * *",  # svaki dan u 03:00
+    schedule_interval=None,  # svaki dan u 03:00
     catchup=False,
     tags=["star_schema", "silver_to_gold"],
 ) as dag:
@@ -126,12 +127,60 @@ with DAG(
         autocommit=True,
     )
 
+    run_create_fact_company_readings = PostgresOperator(
+        task_id="run_create_fact_company_readings",
+        postgres_conn_id="postgres_analytical",
+        sql="star-schema/03_create_fact_company_readings.sql",
+        autocommit=True,
+    )
+
+    run_populate_fact_company_readings = PostgresOperator(
+        task_id="run_populate_fact_company_readings",
+        postgres_conn_id="postgres_analytical",
+        sql="star-schema/11_populate_fact_company_readings.sql",
+        autocommit=True,
+    )
+
+
+     # -----------------------------------------------------------
+    # 11) Kreiraj fact_plug_assignment i popuni
+    # -----------------------------------------------------------
+    run_create_fact_plug_assignment = PostgresOperator(
+        task_id="run_create_fact_plug_assignment",
+        postgres_conn_id="postgres_analytical",
+        sql="star-schema/12_create_fact_plug_assignment.sql",
+        autocommit=True,
+    )
+    run_populate_fact_plug_assignment = PostgresOperator(
+        task_id="run_populate_fact_plug_assignment",
+        postgres_conn_id="postgres_analytical",
+        sql="star-schema/13_populate_fact_plug_assignment.sql",
+        autocommit=True,
+    )
+
+    # -----------------------------------------------------------
+    # 12) Kreiraj fact_device_events i popuni
+    # -----------------------------------------------------------
+    run_create_fact_device_events = PostgresOperator(
+        task_id="run_create_fact_device_events",
+        postgres_conn_id="postgres_analytical",
+        sql="star-schema/14_create_fact_device_events.sql",
+        autocommit=True,
+    )
+    run_populate_fact_device_events = PostgresOperator(
+        task_id="run_populate_fact_device_events",
+        postgres_conn_id="postgres_analytical",
+        sql="star-schema/15_populate_fact_device_events.sql",
+        autocommit=True,
+    )
+
     # -----------------------------------------------------------
     # Definicija ovisnosti (DAG flow)
     # -----------------------------------------------------------
     (
         run_create_dims
         >> run_populate_dim_time
+        >> run_create_facts
         >> run_scd2_dim_user
         >> run_scd2_dim_location
         >> run_scd2_dim_room
@@ -140,4 +189,10 @@ with DAG(
         >> run_scd2_dim_department
         >> run_scd2_dim_smart_plug
         >> run_populate_fact
+        >> run_create_fact_company_readings 
+        >> run_populate_fact_company_readings
+        >> run_create_fact_plug_assignment
+        >> run_populate_fact_plug_assignment
+        >> run_create_fact_device_events
+        >> run_populate_fact_device_events
     )
