@@ -220,7 +220,7 @@ def populate_cleaned_table(cur, info):
             # row: (assignment_id, plug_id, room_id, device_id, start_time, end_time, updated)
             assignment_id, plug_id, room_id, device_id, start_time, end_time, updated = row
             cleaned_rows.append((
-                cleanValue(assignment_id),
+                clean_value(assignment_id),
                 clean_value(plug_id),
                 clean_value(room_id),
                 clean_value(device_id),
