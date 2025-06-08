@@ -189,6 +189,44 @@ External APIs ───┘                     (SCD2)           (Quality)       
 - `dim_company`: Company information
 - `dim_department`: Organizational structure
 
+## Reports and Presentations
+
+### Power BI Reports
+
+The project includes two Power BI reports that provide interactive visualizations and analytics:
+
+1. **PowerBiReport.pbix**
+
+   - Main dashboard for energy consumption analysis
+   - Real-time monitoring of smart plug usage
+   - Cost and CO2 impact calculations
+   - User and company-level analytics
+
+2. **bi-reportaa.pbix**
+   - Alternative view with different visualizations
+   - Focus on historical trends and comparisons
+   - Department-level analysis for enterprise users
+
+### Documentation
+
+- **PowerBiReport.pdf**: Detailed documentation of the Power BI report features and usage
+- **Nijaz Andelic GreenPalsBI Presentation.pptx**: Project presentation covering architecture, implementation, and results
+
+### Accessing Reports
+
+1. Open the .pbix files using Power BI Desktop
+2. Connect to the analytical database using the credentials in the Quick Start section
+3. Refresh the data to get the latest analytics
+
+### Report Features
+
+- Interactive dashboards
+- Drill-down capabilities
+- Time-based analysis
+- Cost and environmental impact metrics
+- User and company comparisons
+- Department-level insights
+
 ## Development Guidelines
 
 ### Adding New DAGs
