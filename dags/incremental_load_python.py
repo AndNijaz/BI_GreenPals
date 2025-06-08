@@ -1,226 +1,109 @@
-# incremental_load_python.py
-
-import psycopg2
+# -------------------------------------------------------------
+#  incremental_load_python.py
+#  → operaciona baza + API  → landing.*
+# -------------------------------------------------------------
+import psycopg2, requests, sys
 from psycopg2.extras import execute_values
-import sys
+from datetime import datetime
+from tables_config import TABLES_PUBLIC, TABLES_COMPANY
 
-# ================================================
-# 1) Konfiguracija konekcija
-# ================================================
+# ---------- 1) DB konekcije ----------
 OP_CONFIG = {
     "dbname": "db_operational",
     "user": "postgres",
     "password": "napoleonlm10",
-    "host": "db_operational",   # vidjeti napomenu niže
+    "host": "db_operational",
     "port": 5432
 }
-
 AN_CONFIG = {
     "dbname": "db_analytical",
     "user": "postgres",
     "password": "napoleonlm10",
-    "host": "db_analytical",     # vidjeti napomenu niže
+    "host": "db_analytical",
     "port": 5432
 }
 
-# ================================================
-# 2) Definicija tablica i njihovih kolona
-# ================================================
-TABLES_PUBLIC = {
-    "users": {
-        "schema": "public",
-        "landing": "landing.users",
-        "columns": [
-            "id", "name", "email", "eco_points", "created_at", "updated_at"
-        ]
+# ---------- 2) Operacione meta-tabele ----------
+ALL_TABLES = {**TABLES_PUBLIC, **TABLES_COMPANY}
+
+# ---------- 3) API meta-tabele ----------
+API_TABLES = {
+    "co2_factors": {
+        "endpoint": "http://host.docker.internal:8000/co2-factors",
+        "landing":  "landing.co2_factors",
+        "columns":  ["source_name", "country", "co2_factor", "unit", "updated_at"],
+        "pk":       ["source_name", "country"]
     },
-    "locations": {
-        "schema": "public",
-        "landing": "landing.locations",
-        "columns": [
-            "id", "name", "country", "updated_at"
-        ]
-    },
-    "rooms": {
-        "schema": "public",
-        "landing": "landing.rooms",
-        "columns": [
-            "id", "name", "location_id", "updated_at"
-        ]
-    },
-    "devices": {
-        "schema": "public",
-        "landing": "landing.devices",
-        "columns": [
-            "id", "name", "category", "created_at", "updated_at"
-        ]
-    },
-    "smart_plugs": {
-        "schema": "public",
-        "landing": "landing.smart_plugs",
-        "columns": [
-            "id", "user_id", "room_id", "device_id", "status", "created_at", "updated_at"
-        ]
-    },
-    "plug_assignments": {
-        "schema": "public",
-        "landing": "landing.plug_assignments",
-        "columns": [
-            "id", "plug_id", "room_id", "device_id", "start_time", "end_time", "created_at", "updated_at"
-        ]
-    },
-    "readings": {
-        "schema": "public",
-        "landing": "landing.readings",
-        "columns": [
-            "id", "plug_id", "timestamp", "power_kwh", "created_at", "updated_at"
-        ]
+    "electricity_prices": {
+        "endpoint": "http://host.docker.internal:8001/electricity-prices",
+        "landing":  "landing.electricity_prices",
+        "columns":  ["country", "price_per_kwh", "updated_at"],
+        "pk":       ["country"]
     }
 }
 
-TABLES_COMPANY = {
-    "companies": {
-        "schema": "company_schema",
-        "landing": "landing.companies",
-        "columns": [
-            "id", "name", "industry", "created_at", "updated_at"
-        ]
-    },
-    "company_locations": {
-        "schema": "company_schema",
-        "landing": "landing.company_locations",
-        "columns": [
-            "id", "name", "country", "co2_factor", "company_id", "updated_at"
-        ]
-    },
-    "departments": {
-        "schema": "company_schema",
-        "landing": "landing.departments",
-        "columns": [
-            "id", "company_id", "name", "updated_at"
-        ]
-    },
-    "company_rooms": {
-        "schema": "company_schema",
-        "landing": "landing.company_rooms",
-        "columns": [
-            "id", "name", "location_id", "updated_at"
-        ]
-    },
-    "company_devices": {
-        "schema": "company_schema",
-        "landing": "landing.company_devices",
-        "columns": [
-            "id", "name", "category", "created_at", "updated_at"
-        ]
-    },
-    "company_users": {
-        "schema": "company_schema",
-        "landing": "landing.company_users",
-        "columns": [
-            "id", "company_id", "name", "email", "department_id", "role", "created_at", "updated_at"
-        ]
-    },
-    "company_smart_plugs": {
-        "schema": "company_schema",
-        "landing": "landing.company_smart_plugs",
-        "columns": [
-            "id", "company_id", "room_id", "device_id", "status", "created_at", "updated_at"
-        ]
-    },
-    "company_plug_assignments": {
-        "schema": "company_schema",
-        "landing": "landing.company_plug_assignments",
-        "columns": [
-            "id", "plug_id", "room_id", "device_id", "start_time", "end_time", "created_at", "updated_at"
-        ]
-    },
-    "company_readings": {
-        "schema": "company_schema",
-        "landing": "landing.company_readings",
-        "columns": [
-            "id", "plug_id", "timestamp", "power_kwh", "created_at", "updated_at"
-        ]
-    }
-}
-
-ALL_TABLES = {}
-ALL_TABLES.update(TABLES_PUBLIC)
-ALL_TABLES.update(TABLES_COMPANY)
-
-
-def upsert_rows(an_conn, landing_table, columns, rows):
+# ---------- 4) Helper funkcije ----------
+def upsert_rows(conn, landing, cols, pk_cols, rows):
     if not rows:
         return
-
-    col_list = ", ".join(columns)
-    pk = "id"
-    update_list = [f"{c} = EXCLUDED.{c}" for c in columns if c != pk]
-    update_clause = ", ".join(update_list)
-
+    col_list = ", ".join(cols)
+    pk_list  = ", ".join(pk_cols)
+    upd_list = ", ".join(f"{c}=EXCLUDED.{c}" for c in cols if c not in pk_cols)
     sql = f"""
-        INSERT INTO {landing_table} ({col_list})
+        INSERT INTO {landing} ({col_list})
         VALUES %s
-        ON CONFLICT ({pk})
-        DO UPDATE 
-          SET {update_clause};
+        ON CONFLICT ({pk_list}) DO UPDATE SET {upd_list};
     """
-
-    with an_conn.cursor() as cur:
-        from psycopg2.extras import execute_values
+    with conn.cursor() as cur:
         execute_values(cur, sql, rows)
-    an_conn.commit()
+    conn.commit()
 
+def max_updated(conn, landing):
+    with conn.cursor() as cur:
+        cur.execute(f"SELECT COALESCE(MAX(updated_at),'2000-01-01') FROM {landing};")
+        return cur.fetchone()[0]
 
-def incremental_load(op_conn, an_conn):
-    for tbl_name, info in ALL_TABLES.items():
-        schema = info["schema"]
-        landing = info["landing"]
-        cols = info["columns"]
+def fetch_api_rows(endpoint, since_iso):
+    r = requests.get(endpoint, params={"since": since_iso}, timeout=15)
+    r.raise_for_status()
+    return r.json()   # list[dict]
 
-        with an_conn.cursor() as cur_an:
-            cur_an.execute(f"SELECT COALESCE(MAX(updated_at), '2000-01-01') FROM {landing};")
-            last_updated = cur_an.fetchone()[0]
+# ---------- 5) Glavni proces ----------
+def incremental_load():
+    op = psycopg2.connect(**OP_CONFIG)
+    an = psycopg2.connect(**AN_CONFIG)
 
-        select_cols = ", ".join(cols)
-        op_query = (
-            f"SELECT {select_cols} "
-            f"FROM {schema}.{tbl_name} "
-            f"WHERE updated_at > %s"
-        )
-        with op_conn.cursor() as cur_op:
-            cur_op.execute(op_query, (last_updated,))
-            rows = cur_op.fetchall()
+    # 5.1  Operaciona baza → landing.*
+    for tbl, meta in ALL_TABLES.items():
+        last = max_updated(an, meta["landing"])
+        select_cols = ", ".join(meta["columns"])
+        src_table   = f"{meta['schema']}.{tbl}"
 
-        print(f"→ `{schema}.{tbl_name}`: pronađeno {len(rows):,} novih/izmijenjenih redova (since {last_updated}).")
-        if rows:
-            upsert_rows(an_conn, landing, cols, rows)
+        with op.cursor() as cur:
+            cur.execute(
+                f"SELECT {select_cols} FROM {src_table} WHERE updated_at > %s;",
+                (last,)
+            )
+            rows = cur.fetchall()
 
+        print(f"[OP] {src_table} → {meta['landing']}: {len(rows)} rows")
+        upsert_rows(an, meta["landing"], meta["columns"], ["id"], rows)
 
-def main():
-    print("\n=== Pokretanje Incremental Load (Python) ===\n")
+    # 5.2  API → landing.*
+    for tbl, meta in API_TABLES.items():
+        last = max_updated(an, meta["landing"])
+        rows_json = fetch_api_rows(meta["endpoint"], last.isoformat())
+        rows = [
+            tuple(j.get(c, None) for c in meta["columns"][:-1]) + (datetime.utcnow(),)
+            for j in rows_json
+        ]
 
-    try:
-        op_conn = psycopg2.connect(**OP_CONFIG)
-    except Exception as e:
-        print("Greška: ne mogu se spojiti na db_operational:", e)
-        sys.exit(1)
+        print(f"[API] {tbl} → {meta['landing']}: {len(rows)} rows")
+        upsert_rows(an, meta["landing"], meta["columns"], meta["pk"], rows)
 
-    try:
-        an_conn = psycopg2.connect(**AN_CONFIG)
-    except Exception as e:
-        print("Greška: ne mogu se spojiti na db_analytical:", e)
-        op_conn.close()
-        sys.exit(1)
-
-    incremental_load(op_conn, an_conn)
-
-    op_conn.close()
-    an_conn.close()
-
-    print("\n=== Incremental Load završen! ===")
-    print("Možete sada pokrenuti SCD2 UPDATE nad archive.* tablicama.\n")
-
+    op.close()
+    an.close()
+    print("=== Incremental → landing završeno ===")
 
 if __name__ == "__main__":
-    main()
+    incremental_load()
