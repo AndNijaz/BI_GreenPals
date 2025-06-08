@@ -1,8 +1,15 @@
 """
-Airflow DAG: incremental_scd2_etl.py
+DAG: incremental_scd2_etl
 
-1. Pokreće Python skriptu za incremental load iz db_operational → db_analytical.landing
-2. Pokreće SQL skriptu za SCD2 update iz landing.* → archive.*
+Description:
+    This Airflow DAG executes an incremental ETL process, loading new or updated records from the operational database into the analytical landing layer, followed by SCD2 updates into the archive layer. This supports near real-time data warehousing and historical tracking.
+
+Scheduling:
+    [PLACEHOLDER: Specify scheduling requirements here. Currently, schedule_interval=None, so this DAG must be triggered manually.]
+
+Author:
+    ETL Team
+    University Project – GreenPals / Company IoT
 """
 
 import os

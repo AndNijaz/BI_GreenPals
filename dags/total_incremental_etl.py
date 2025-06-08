@@ -8,8 +8,33 @@ from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from utils.cleaned_snapshot import refresh_cleaned_snapshot
-from airflow.operators.email import EmailOperator
+# from airflow.operators.email import EmailOperator
 
+
+# from airflow.operators.python import PythonOperator
+def simulate_notification(**kwargs):
+    ts = kwargs['ts']
+    dag_id = kwargs['dag'].dag_id
+
+    message = f"""
+    ✅ GreenPals ETL Pipeline Completed Successfully!<br>
+    Timestamp: {ts}<br>
+    DAG: {dag_id}
+    """
+
+    print(message)  # Ispiši u log
+
+    output_path = "/tmp/etl_success.html"
+    with open(output_path, "w") as f:
+        f.write(f"""
+        <html><body>
+            <script>alert("ETL Complete!")</script>
+            <h1>GreenPals ETL Complete ✅</h1>
+            <p>{message}</p>
+        </body></html>
+        """)
+
+    print(f"🔔 HTML notifikacija generisana: {output_path}")
 
 
 
@@ -61,15 +86,21 @@ with DAG(
         autocommit=True
     )
 
-    send_success_email = EmailOperator(
-        task_id="send_success_email",
-        to="admin@greenpals.io",
-        subject="✅ ETL Pipeline Finished Successfully",
-        html_content="""
-        <h3>GreenPals ETL Status</h3>
-        <p>The ETL pipeline for the star schema has been completed successfully at {{ execution_date }}.</p>
-        <p>All layers (archive, cleaned, and star) are now up to date.</p>
-        """,
+    # send_success_email = EmailOperator(
+    #     task_id="send_success_email",
+    #     to="admin@greenpals.io",
+    #     subject="✅ ETL Pipeline Finished Successfully",
+    #     html_content="""
+    #     <h3>GreenPals ETL Status</h3>
+    #     <p>The ETL pipeline for the star schema has been completed successfully at {{ execution_date }}.</p>
+    #     <p>All layers (archive, cleaned, and star) are now up to date.</p>
+    #     """,
+    # )
+
+    simulate_alert = PythonOperator(
+    task_id="simulate_notification",
+    python_callable=simulate_notification,
+    provide_context=True
     )
 
-    t1 >> t2 >> t3 >> t4 >> t5 >> send_success_email
+    t1 >> t2 >> t3 >> t4 >> t5 >> simulate_alert

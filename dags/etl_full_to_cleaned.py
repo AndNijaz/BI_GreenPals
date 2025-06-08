@@ -1,3 +1,17 @@
+"""
+DAG: etl_full_to_cleaned
+
+Description:
+    This Airflow DAG manages the ETL process from the raw (landing) layer to the cleaned and archive_cleaned layers. It ensures data quality and prepares data for downstream analytical processing.
+
+Scheduling:
+    [PLACEHOLDER: Specify scheduling requirements here. Currently, schedule_interval=None, so this DAG must be triggered manually.]
+
+Author:
+    ETL Team
+    University Project – GreenPals / Company IoT
+"""
+
 # etl_full_to_cleaned.py
 
 from datetime import datetime, timedelta

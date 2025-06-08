@@ -1,3 +1,17 @@
+"""
+DAG: full_scd2_etl
+
+Description:
+    This Airflow DAG performs a full ETL load from the operational database to the analytical landing layer, followed by SCD2 updates into the archive layer. It is designed for periodic or on-demand full refreshes of the data warehouse.
+
+Scheduling:
+    [PLACEHOLDER: Specify scheduling requirements here. Currently, schedule_interval=None, so this DAG must be triggered manually.]
+
+Author:
+    ETL Team
+    University Project – GreenPals / Company IoT
+"""
+
 # full_scd2_etl.py
 
 import os

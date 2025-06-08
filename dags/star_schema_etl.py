@@ -1,3 +1,17 @@
+"""
+DAG: star_schema_etl
+
+Description:
+    This Airflow DAG orchestrates the ETL process for creating and populating a star schema in the analytical database. It sequentially creates all dimension tables, performs SCD2 updates, and populates fact tables, supporting a robust data warehousing solution for analytical workloads.
+
+Scheduling:
+    [PLACEHOLDER: Specify scheduling requirements here. Currently, schedule_interval=None, so this DAG must be triggered manually.]
+
+Author:
+    ETL Team
+    University Project – GreenPals / Company IoT
+"""
+
 # star_schema_etl.py
 
 from datetime import datetime, timedelta

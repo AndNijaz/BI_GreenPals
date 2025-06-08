@@ -1,4 +1,16 @@
-# populate_cleaned_dag.py
+"""
+DAG: populate_cleaned
+
+Description:
+    This Airflow DAG populates the CLEANED layer from ARCHIVE_RAW, ensuring that the cleaned tables are up-to-date and ready for further processing or analysis.
+
+Scheduling:
+    [PLACEHOLDER: Specify scheduling requirements here. Currently, schedule_interval=None, so this DAG must be triggered manually.]
+
+Author:
+    ETL Team
+    University Project – GreenPals / Company IoT
+"""
 
 from datetime import datetime, timedelta
 from airflow import DAG
