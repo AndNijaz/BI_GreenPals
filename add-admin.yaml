@@ -6,3 +6,7 @@ price-api-http	HTTP	http://host.docker.internal:8001
 
 
 pip install requests
+
+
+python -m uvicorn api.co2_factors_api:app --reload
+python -m uvicorn api.electricity_prices_api:app --reload --port 8001
