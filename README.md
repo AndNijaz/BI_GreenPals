@@ -4,6 +4,9 @@
 
 This project implements a comprehensive data engineering pipeline for the GreenPals IoT ecosystem, designed to process and analyze energy consumption data from smart plugs across both residential and enterprise environments. The system demonstrates modern data warehouse architecture principles with Apache Airflow orchestration, implementing medallion architecture (Bronze-Silver-Gold layers) and dimensional modeling techniques.
 
+![Data Engineering Pipeline Architecture](https://github.com/user-attachments/assets/63243599-b4b9-4466-88c2-bedcb7f01d40)
+_Figure: End-to-end data pipeline from sources to analytics and exports_
+
 **University Project** - Business Intelligence & Data Warehousing  
 **Authors**: ETL Team  
 **Technologies**: Apache Airflow, PostgreSQL, Docker, Python, SQL
@@ -318,4 +321,3 @@ For questions or contributions regarding this university project, please contact
 ---
 
 **Note**: This project is developed for educational purposes as part of a Business Intelligence and Data Warehousing course. All scheduling placeholders should be configured based on specific requirements and operational needs.
-![Architecture](https://github.com/user-attachments/assets/63243599-b4b9-4466-88c2-bedcb7f01d40)
