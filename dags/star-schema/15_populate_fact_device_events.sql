@@ -1,15 +1,17 @@
 -- 15_populate_fact_device_events.sql
+-- ETL za fact_device_events: detektiramo ON/OFF evente iz archive.smart_plugs
+-- i ubacujemo ih (s agregacijom po minuti) u public.fact_device_events.
 
 WITH changes AS (
   SELECT
     sp.plug_id,
     sp.status      AS new_status,
-    sp.updated_at,
+    sp.updated     AS updated_at,  -- ✅ ispravljeno ovdje
     LAG(sp.status) OVER (
       PARTITION BY sp.plug_id
-      ORDER BY sp.updated_at
+      ORDER BY sp.updated          -- ✅ i ovdje
     ) AS prev_status
-  FROM cleaned.smart_plugs AS sp
+  FROM archive.smart_plugs AS sp
 ),
 events AS (
   SELECT
@@ -21,37 +23,39 @@ events AS (
     END AS event_type,
     updated_at
   FROM changes
-),
-agg AS (
-  SELECT
-    plug_id,
-    event_type,
-    DATE(updated_at)     AS event_date,
-    COUNT(*)             AS event_count,
-    MAX(updated_at)      AS created_at
-  FROM events
-  WHERE event_type IS NOT NULL
-  GROUP BY plug_id, event_type, DATE(updated_at)
 )
+
 INSERT INTO public.fact_device_events (
-  time_id, plug_key, event_type, event_count, created_at
+  time_id,
+  plug_key,
+  event_type,
+  event_count,
+  created_at
 )
 SELECT
   dt.time_id,
   dsp.plug_key,
-  agg.event_type,
-  agg.event_count,
-  agg.created_at
-FROM agg
-JOIN public.dim_time        AS dt
-  ON dt.full_date = agg.event_date
-JOIN public.dim_smart_plug  AS dsp
-  ON dsp.plug_id = agg.plug_id
+  e.event_type,
+  COUNT(*)           AS event_count,
+  MAX(e.updated_at)  AS created_at
+FROM events AS e
+
+-- spajanje na dim_time po minuti
+JOIN public.dim_time AS dt
+  ON dt.full_date = e.updated_at::date
+ AND dt.hour      = EXTRACT(HOUR   FROM e.updated_at)::INT
+ AND dt.minute    = EXTRACT(MINUTE FROM e.updated_at)::INT
+
+-- spajanje na aktivni smart_plug u dimenziji
+JOIN public.dim_smart_plug AS dsp
+  ON dsp.plug_id = e.plug_id
  AND dsp.end_date = '9999-12-31'
+
+WHERE e.event_type IS NOT NULL
+
+GROUP BY dt.time_id, dsp.plug_key, e.event_type
+
 ON CONFLICT (time_id, plug_key, event_type)
-DO UPDATE SET
-  event_count = EXCLUDED.event_count,
-  created_at  = EXCLUDED.created_at;
--- (Optional) Add index for performance:
-CREATE INDEX IF NOT EXISTS idx_fact_device_events_time_id
-  ON public.fact_device_events(time_id);
+DO UPDATE
+  SET event_count = EXCLUDED.event_count,
+      created_at  = EXCLUDED.created_at;
