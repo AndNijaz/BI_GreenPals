@@ -318,3 +318,4 @@ For questions or contributions regarding this university project, please contact
 ---
 
 **Note**: This project is developed for educational purposes as part of a Business Intelligence and Data Warehousing course. All scheduling placeholders should be configured based on specific requirements and operational needs.
+![Architecture](https://github.com/user-attachments/assets/63243599-b4b9-4466-88c2-bedcb7f01d40)
