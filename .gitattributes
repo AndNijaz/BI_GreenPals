@@ -1,1 +1,11 @@
-data/*.csv filter=lfs diff=lfs merge=lfs -text
+# Power BI files
+*.pbix filter=lfs diff=lfs merge=lfs -text
+*.pbit filter=lfs diff=lfs merge=lfs -text
+# PowerPoint files
+*.pptx filter=lfs diff=lfs merge=lfs -text
+*.ppt filter=lfs diff=lfs merge=lfs -text
+# Excel files (if you have any)
+*.xlsx filter=lfs diff=lfs merge=lfs -text
+*.xls filter=lfs diff=lfs merge=lfs -text
+# PDF files (if you have any)
+*.pdf filter=lfs diff=lfs merge=lfs -text
