@@ -1,0 +1,5 @@
+docker-compose run airflow-worker airflow users create --role Admin --username admin --email admin --firstname admin --lastname admin --password admin
+
+Conn Id	Type	Host
+co2-api-http	HTTP	http://host.docker.internal:8000
+price-api-http	HTTP	http://host.docker.internal:8001
