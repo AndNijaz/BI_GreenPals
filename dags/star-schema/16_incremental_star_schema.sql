@@ -9,14 +9,23 @@
 -------------------------------------------------------------*/
 DO $$
 BEGIN
-  -- kreiraj sekvence za dimenzije ako ne postoje
-  CREATE SEQUENCE IF NOT EXISTS seq_user_key;
-  CREATE SEQUENCE IF NOT EXISTS seq_location_key;
-  CREATE SEQUENCE IF NOT EXISTS seq_room_key;
-  CREATE SEQUENCE IF NOT EXISTS seq_device_key;
-  CREATE SEQUENCE IF NOT EXISTS seq_company_key;
-  CREATE SEQUENCE IF NOT EXISTS seq_department_key;
-  CREATE SEQUENCE IF NOT EXISTS seq_plug_key;
+  -- Drop existing sequences if they exist
+  DROP SEQUENCE IF EXISTS seq_user_key;
+  DROP SEQUENCE IF EXISTS seq_location_key;
+  DROP SEQUENCE IF EXISTS seq_room_key;
+  DROP SEQUENCE IF EXISTS seq_device_key;
+  DROP SEQUENCE IF EXISTS seq_company_key;
+  DROP SEQUENCE IF EXISTS seq_department_key;
+  DROP SEQUENCE IF EXISTS seq_plug_key;
+
+  -- Create new sequences
+  CREATE SEQUENCE seq_user_key;
+  CREATE SEQUENCE seq_location_key;
+  CREATE SEQUENCE seq_room_key;
+  CREATE SEQUENCE seq_device_key;
+  CREATE SEQUENCE seq_company_key;
+  CREATE SEQUENCE seq_department_key;
+  CREATE SEQUENCE seq_plug_key;
 
   -- poravnaj svaku sekvencu na max ključ iz postojeće dimenzije
   PERFORM setval('seq_user_key',       COALESCE((SELECT MAX(user_key)       FROM dim_user),       0));
